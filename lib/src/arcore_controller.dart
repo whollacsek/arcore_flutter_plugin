@@ -150,6 +150,11 @@ class ArCoreController {
         'attachObjectToAugmentedImage', {'index': index, 'node': params});
   }
 
+  Future<void> addVideoToAugmentedImage(int index, {String parentNodeName}) {
+    return _channel.invokeMethod('attachVideoToAugmentedImage',
+        {'index': index /* TODO: pass video name / url here */});
+  }
+
   Future<void> addArCoreNodeWithAnchor(ArCoreNode node,
       {String parentNodeName}) {
     assert(node != null);

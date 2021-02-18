@@ -4,8 +4,12 @@ import android.app.Activity
 import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
+import android.graphics.SurfaceTexture
+import android.media.MediaPlayer
 import android.util.Log
 import android.util.Pair
+import android.view.Gravity
+import android.widget.Toast
 import com.difrancescogianmarco.arcore_flutter_plugin.flutter_models.FlutterArCoreNode
 import com.difrancescogianmarco.arcore_flutter_plugin.flutter_models.FlutterArCorePose
 import com.difrancescogianmarco.arcore_flutter_plugin.utils.ArCoreUtils
@@ -16,7 +20,11 @@ import com.google.ar.core.TrackingState
 import com.google.ar.core.exceptions.CameraNotAvailableException
 import com.google.ar.core.exceptions.UnavailableException
 import com.google.ar.sceneform.AnchorNode
+import com.google.ar.sceneform.Node
 import com.google.ar.sceneform.Scene
+import com.google.ar.sceneform.math.Vector3
+import com.google.ar.sceneform.rendering.ExternalTexture
+import com.google.ar.sceneform.rendering.ModelRenderable
 import com.google.ar.sceneform.ux.TransformationSystem
 import io.flutter.plugin.common.BinaryMessenger
 import io.flutter.plugin.common.MethodCall
@@ -33,6 +41,13 @@ class ArCoreAugmentedImagesView(activity: Activity, context: Context, messenger:
     // the
     // database.
     private val augmentedImageMap = HashMap<Int, Pair<AugmentedImage, AnchorNode>>()
+
+    private var videoRenderable: ModelRenderable? = null
+    private var mediaPlayer: MediaPlayer? = null
+
+    companion object {
+        private const val VIDEO_HEIGHT_METERS = 0.2f
+    }
 
     init {
 
@@ -175,6 +190,75 @@ class ArCoreAugmentedImagesView(activity: Activity, context: Context, messenger:
                         result.error("attachObjectToAugmentedImage error", "Augmented image there isn't ona hashmap", null)
                     }
                 }
+                "attachVideoToAugmentedImage" -> {
+                    debugLog( "attachVideoToAugmentedImage")
+                    // Create an ExternalTexture for displaying the contents of the video.
+                    val texture = ExternalTexture()
+
+                    // Create an Android MediaPlayer to capture the video on the external texture's surface.
+                    mediaPlayer = MediaPlayer.create(activity, R.raw.lion_chroma)
+                    mediaPlayer!!.setSurface(texture.surface)
+                    mediaPlayer!!.setLooping(true)
+
+                    // Create a renderable with a material that has a parameter of type 'samplerExternal' so that
+                    // it can display an ExternalTexture. The material also has an implementation of a chroma key
+                    // filter.
+                    ModelRenderable.builder()
+//                            .setSource(activity, R.raw.chroma_key_video)
+                            .build()
+                            .thenAccept { renderable ->
+                                videoRenderable = renderable
+                                renderable.getMaterial().setExternalTexture("videoTexture", texture)
+//                                renderable.getMaterial().setFloat4("keyColor", CHROMA_KEY_COLOR)
+                            }
+                            .exceptionally { throwable ->
+                                val toast: Toast = Toast.makeText(activity, "Unable to load video renderable", Toast.LENGTH_LONG)
+                                toast.setGravity(Gravity.CENTER, 0, 0)
+                                toast.show()
+                                null
+                            }
+
+
+                    val map = call.arguments as HashMap<String, Any>
+                    val index = map["index"] as Int
+                    if (augmentedImageMap.containsKey(index)) {
+                        val anchorNode = augmentedImageMap[index]!!.second
+
+                        // Create the Anchor.
+                        anchorNode.setParent(arSceneView?.scene)
+
+                        // Create a node to render the video and add it to the anchor.
+                        val videoNode = Node()
+                        videoNode.setParent(anchorNode)
+
+                        // Set the scale of the node so that the aspect ratio of the video is correct.
+                        val videoWidth: Float = mediaPlayer!!.videoWidth.toFloat()
+                        val videoHeight: Float = mediaPlayer!!.videoHeight.toFloat()
+                        videoNode.localScale = Vector3(
+                                VIDEO_HEIGHT_METERS * (videoWidth / videoHeight), VIDEO_HEIGHT_METERS, 1.0f)
+
+                        // Start playing the video when the first node is placed.
+                        if (!mediaPlayer!!.isPlaying()) {
+                            mediaPlayer!!.start()
+
+                            // Wait to set the renderable until the first frame of the video becomes available.
+                            // This prevents the renderable from briefly appearing as a black quad before the video
+                            // plays.
+                            texture
+                                    .surfaceTexture
+                                    .setOnFrameAvailableListener { surfaceTexture: SurfaceTexture? ->
+                                        videoNode.renderable = videoRenderable
+                                        texture.surfaceTexture.setOnFrameAvailableListener(null)
+                                    }
+                        } else {
+                            videoNode.renderable = videoRenderable
+                        }
+
+                        result.success(null)
+                    } else {
+                        result.error("attachObjectToAugmentedImage error", "Augmented image there isn't ona hashmap", null)
+                    }
+                }
                 "removeARCoreNodeWithIndex" -> {
                     debugLog( "removeObject")
                     try {
@@ -253,6 +337,15 @@ class ArCoreAugmentedImagesView(activity: Activity, context: Context, messenger:
             return
         }
     }
+
+//    @Override
+//    fun onDestroy() {
+//        super.onDestroy()
+//        if (mediaPlayer != null) {
+//            mediaPlayer.release()
+//            mediaPlayer = null
+//        }
+//    }
 
     fun setupSession(bytes: ByteArray?, useSingleImage: Boolean) {
         debugLog( "setupSession()")

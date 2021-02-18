@@ -484,6 +484,7 @@ class ArCoreView(val activity: Activity, context: Context, messenger: BinaryMess
                     }
                     config.updateMode = Config.UpdateMode.LATEST_CAMERA_IMAGE
                     config.focusMode = Config.FocusMode.AUTO;
+                    config.planeFindingMode = Config.PlaneFindingMode.HORIZONTAL_AND_VERTICAL
                     session.configure(config)
                     arSceneView?.setupSession(session)
                 }
