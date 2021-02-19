@@ -204,7 +204,7 @@ class ArCoreAugmentedImagesView(activity: Activity, context: Context, messenger:
                     // it can display an ExternalTexture. The material also has an implementation of a chroma key
                     // filter.
                     ModelRenderable.builder()
-//                            .setSource(activity, R.raw.chroma_key_video)
+                            .setSource(activity, R.raw.chroma_key_video)
                             .build()
                             .thenAccept { renderable ->
                                 videoRenderable = renderable
@@ -212,6 +212,7 @@ class ArCoreAugmentedImagesView(activity: Activity, context: Context, messenger:
 //                                renderable.getMaterial().setFloat4("keyColor", CHROMA_KEY_COLOR)
                             }
                             .exceptionally { throwable ->
+Log.e(TAG, "=====", throwable)
                                 val toast: Toast = Toast.makeText(activity, "Unable to load video renderable", Toast.LENGTH_LONG)
                                 toast.setGravity(Gravity.CENTER, 0, 0)
                                 toast.show()
