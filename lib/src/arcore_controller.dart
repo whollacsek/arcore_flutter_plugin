@@ -1,12 +1,10 @@
 import 'dart:typed_data';
 
 import 'package:arcore_flutter_plugin/src/arcore_augmented_image.dart';
-import 'package:arcore_flutter_plugin/src/arcore_rotating_node.dart';
-import 'package:arcore_flutter_plugin/src/utils/vector_utils.dart';
 import 'package:flutter/services.dart';
 import 'package:meta/meta.dart';
-import 'arcore_hit_test_result.dart';
 
+import 'arcore_hit_test_result.dart';
 import 'arcore_node.dart';
 import 'arcore_plane.dart';
 
@@ -150,9 +148,10 @@ class ArCoreController {
         'attachObjectToAugmentedImage', {'index': index, 'node': params});
   }
 
-  Future<void> addVideoToAugmentedImage(int index, {String parentNodeName}) {
+  Future<void> addVideoToAugmentedImage(int index,
+      {String parentNodeName, String videoAsset, String chromaAsset}) {
     return _channel.invokeMethod('attachVideoToAugmentedImage',
-        {'index': index /* TODO: pass video name / url here */});
+        {'index': index, 'video': videoAsset, 'chroma': chromaAsset});
   }
 
   Future<void> addArCoreNodeWithAnchor(ArCoreNode node,

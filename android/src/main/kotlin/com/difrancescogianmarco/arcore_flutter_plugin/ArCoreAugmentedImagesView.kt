@@ -6,6 +6,7 @@ import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.graphics.SurfaceTexture
 import android.media.MediaPlayer
+import android.net.Uri
 import android.util.Log
 import android.util.Pair
 import android.view.Gravity
@@ -25,7 +26,7 @@ import com.google.ar.sceneform.Scene
 import com.google.ar.sceneform.math.Vector3
 import com.google.ar.sceneform.rendering.ExternalTexture
 import com.google.ar.sceneform.rendering.ModelRenderable
-import com.google.ar.sceneform.ux.TransformationSystem
+import io.flutter.FlutterInjector
 import io.flutter.plugin.common.BinaryMessenger
 import io.flutter.plugin.common.MethodCall
 import io.flutter.plugin.common.MethodChannel
@@ -196,15 +197,22 @@ class ArCoreAugmentedImagesView(activity: Activity, context: Context, messenger:
                     val texture = ExternalTexture()
 
                     // Create an Android MediaPlayer to capture the video on the external texture's surface.
-                    mediaPlayer = MediaPlayer.create(activity, R.raw.lion_chroma)
+                    val videoPath: String = FlutterInjector.instance().flutterLoader().getLookupKeyForAsset(call.argument<String>("video")!!)
+//                    val videoAsset = activity.assets.openFd(videoPath)
+
+                    mediaPlayer = MediaPlayer.create(activity, Uri.parse(videoPath))
                     mediaPlayer!!.setSurface(texture.surface)
                     mediaPlayer!!.setLooping(true)
+
+
+                    val chromaPath: String = FlutterInjector.instance().flutterLoader().getLookupKeyForAsset(call.argument<String>("chroma")!!)
+//                    val chromaAsset = activity.assets.openFd(chromaPath)
 
                     // Create a renderable with a material that has a parameter of type 'samplerExternal' so that
                     // it can display an ExternalTexture. The material also has an implementation of a chroma key
                     // filter.
                     ModelRenderable.builder()
-                            .setSource(activity, R.raw.chroma_key_video)
+                            .setSource(activity, Uri.parse(chromaPath))
                             .build()
                             .thenAccept { renderable ->
                                 videoRenderable = renderable
@@ -212,7 +220,7 @@ class ArCoreAugmentedImagesView(activity: Activity, context: Context, messenger:
 //                                renderable.getMaterial().setFloat4("keyColor", CHROMA_KEY_COLOR)
                             }
                             .exceptionally { throwable ->
-Log.e(TAG, "=====", throwable)
+                                Log.e(TAG, "=====", throwable)
                                 val toast: Toast = Toast.makeText(activity, "Unable to load video renderable", Toast.LENGTH_LONG)
                                 toast.setGravity(Gravity.CENTER, 0, 0)
                                 toast.show()
